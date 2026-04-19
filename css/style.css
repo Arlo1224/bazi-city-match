@@ -377,6 +377,17 @@ body {
   color: var(--ink-faint);
 }
 
+.method-tag {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.detail-text {
+  font-size: 13px;
+  color: var(--ink-light);
+  line-height: 1.7;
+}
+
 /* ══════════════════════════════════════
    城市推荐卡片
 ══════════════════════════════════════ */

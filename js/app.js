@@ -17,6 +17,26 @@ const GENERATES = {'木':'火','火':'土','土':'金','金':'水','水':'木'};
 // 五行相克（A克B）
 const RESTRICTS = {'木':'土','土':'水','水':'火','火':'金','金':'木'};
 
+// ══════════════════════════════════════
+// 调候用神表（极端气候月份）
+// 依据《穷通宝鉴》核心原则，五行级别
+// 极寒月：亥(11)子(0)丑(1)   极热月：巳(5)午(6)未(7)
+// ══════════════════════════════════════
+// pri = 主调候用神，sec = 次调候用神
+// 说明：
+//   木日主：寒月喜丙火暖局，热月喜癸水滋根
+//   火日主：寒月喜甲木（燃料）*注：丙火另需壬水激发，此处取木为通用
+//   土日主：寒月喜丙火暖土，热月喜壬水润土
+//   金日主：寒月喜丙火暖金（火克金，需土通关），热月喜壬水洗金泄秀
+//   水日主：寒月水旺喜戊土制水+丙火暖，热月水衰喜庚金生水
+const TIAOHOU_WX = {
+  '木': { '极寒': { pri:'火', sec:'金' }, '极热': { pri:'水', sec:'金' } },
+  '火': { '极寒': { pri:'木', sec:'土' }, '极热': { pri:'水', sec:'土' } },
+  '土': { '极寒': { pri:'火', sec:'木' }, '极热': { pri:'水', sec:'木' } },
+  '金': { '极寒': { pri:'火', sec:'土' }, '极热': { pri:'水', sec:'土' } },
+  '水': { '极寒': { pri:'土', sec:'火' }, '极热': { pri:'金', sec:'土' } },
+};
+
 // 五行颜色
 const WX_COLOR = {'木':'#5C8A4A','火':'#C84B31','土':'#8B6914','金':'#B8A040','水':'#2B5F8A'};
 
@@ -227,6 +247,60 @@ function getXiYongShen(analysis) {
   return [...new Set(xys)]; // 去重
 }
 
+// 气候判断
+function getClimate(monBrIdx) {
+  if ([0, 1, 11].includes(monBrIdx)) return '极寒';
+  if ([5, 6, 7].includes(monBrIdx)) return '极热';
+  return '温和';
+}
+
+// 综合取用神：调候优先 + 扶抑结合
+// 原则：极端气候调候绝对优先，冲突时用通关化解，温和月以扶抑为主
+function getXiYongShenFull(rt) {
+  const analysis = analyzeQiangRuo(rt);
+  const { dayWx, monBrIdx } = analysis;
+  const climate  = getClimate(monBrIdx);
+  const fuyi     = getXiYongShen(analysis); // 扶抑法结果
+
+  if (climate === '温和') {
+    return { xys: fuyi, method: '扶抑为主', climate, analysis,
+      detail: '气候平和，以旺衰扶抑为主要依据' };
+  }
+
+  // ── 极端气候：调候优先 ──────────────────
+  const th  = TIAOHOU_WX[dayWx][climate];
+  const xys = [th.pri];
+  let detail;
+
+  // 情况A：调候用神直接克日主（最典型：寒冬庚金需火调候，但火克金）
+  //         化解方式：通关——调候用神所生的元素（火→土→金）
+  if (RESTRICTS[th.pri] === dayWx) {
+    const tongguan = GENERATES[th.pri]; // 如火→土
+    if (!xys.includes(tongguan)) xys.push(tongguan);
+    detail = `${climate}，先取${th.pri}调候暖局；`
+           + `${th.pri}克${dayWx}存在矛盾，以${tongguan}通关`
+           + `（${th.pri}→${tongguan}→${dayWx}）化解，兼顾调候与日主`;
+
+  // 情况B：调候与扶抑方向完全一致
+  } else if (fuyi.includes(th.pri)) {
+    fuyi.forEach(w => { if (!xys.includes(w)) xys.push(w); });
+    detail = `${climate}，调候（${th.pri}）与扶抑（${fuyi.join('/')}）方向一致，取共同用神`;
+
+  // 情况C：调候与扶抑方向不同，但无直接克制冲突
+  //         调候优先，扶抑中与调候相生的元素可兼取
+  } else {
+    if (th.sec && !xys.includes(th.sec)) xys.push(th.sec);
+    // 扶抑中与调候相生（调候生扶抑 或 扶抑生调候）的元素纳入
+    fuyi.forEach(w => {
+      if ((GENERATES[th.pri] === w || GENERATES[w] === th.pri) && !xys.includes(w))
+        xys.push(w);
+    });
+    detail = `${climate}，调候（${th.pri}）优先救命；扶抑（${fuyi.join('/')}）为辅调运`;
+  }
+
+  return { xys, method: '调候优先', climate, analysis, detail };
+}
+
 // 推荐城市（取前两个喜用神的城市，各3个）
 function recommendCities(xiyongshens) {
   const result = [];
@@ -302,17 +376,22 @@ function renderBaziCard(rt) {
   return html;
 }
 
-function renderAnalysis(analysis, xiyongshens) {
+function renderAnalysis(xysResult) {
+  const { xys, method, climate, analysis, detail } = xysResult;
   const { isQiang, dayIdx, dayWx, monBrIdx, monWx, deling, helpers, opponents } = analysis;
-  const dayName = STEMS[dayIdx];
-  const monName = BRANCHES[monBrIdx];
-  const wxInfo = WX_INFO[dayWx];
+
+  const dayName  = STEMS[dayIdx];
+  const monName  = BRANCHES[monBrIdx];
   const strength = isQiang ? '偏旺' : '偏弱';
   const strengthColor = isQiang ? '#C84B31' : '#2B5F8A';
 
+  const climateLabels = { '极寒':'寒冬（亥子丑月）', '极热':'盛夏（巳午未月）', '温和':'春秋温和月' };
+  const climateColors = { '极寒':'#2B5F8A', '极热':'#C84B31', '温和':'#5C8A4A' };
+  const methodLabels  = { '调候优先':'调候优先 · 先救命', '扶抑为主':'扶抑为主 · 调强弱' };
+
   const delingText = deling
-    ? `月令${monName}（${monWx}），${GENERATES[monWx] === dayWx ? `${monWx}生${dayWx}，` : ''}日主得令`
-    : `月令${monName}（${monWx}），未能扶助日主，日主失令`;
+    ? `${monName}（${monWx}），${GENERATES[monWx] === dayWx ? monWx + '生' + dayWx + '，' : '同气，'}日主得令`
+    : `${monName}（${monWx}），未能扶助，日主失令`;
 
   let html = `
   <div class="analysis-block">
@@ -325,29 +404,36 @@ function renderAnalysis(analysis, xiyongshens) {
       <span class="value">${delingText}</span>
     </div>
     <div class="analysis-row">
-      <span class="label">帮扶</span>
-      <span class="value">${helpers} 个印星·比劫 vs ${opponents} 个食伤·财·官杀</span>
+      <span class="label">气候</span>
+      <span class="value" style="color:${climateColors[climate]}">${climateLabels[climate]}</span>
     </div>
     <div class="analysis-row">
       <span class="label">旺衰</span>
-      <span class="value strength" style="color:${strengthColor}">日主${strength}</span>
+      <span class="value">${helpers} 帮扶 vs ${opponents} 克泄 · <span class="strength" style="color:${strengthColor}">日主${strength}</span></span>
+    </div>
+    <div class="analysis-row">
+      <span class="label">取用法</span>
+      <span class="value method-tag">${methodLabels[method]}</span>
+    </div>
+    <div class="analysis-row">
+      <span class="label">依据</span>
+      <span class="value detail-text">${detail}</span>
     </div>
     <div class="analysis-row xys-row">
       <span class="label">喜用神</span>
       <span class="value">
-        ${xiyongshens.map(wx => `<span class="wx-badge" style="background:${WX_COLOR[wx]}">${WX_INFO[wx].icon} ${wx}</span>`).join('')}
+        ${xys.map(wx => `<span class="wx-badge" style="background:${WX_COLOR[wx]}">${WX_INFO[wx].icon} ${wx}</span>`).join('')}
       </span>
     </div>
   </div>
   <div class="wx-detail">
-    ${xiyongshens.slice(0,2).map(wx => `
+    ${xys.slice(0,2).map(wx => `
     <div class="wx-detail-item" style="border-left-color:${WX_COLOR[wx]}">
-      <div class="wx-detail-header" style="border-color:${WX_COLOR[wx]}">
-        <span style="color:${WX_COLOR[wx]}">${WX_INFO[wx].icon} ${WX_INFO[wx].title}</span>
-        <span class="wx-nature">${WX_INFO[wx].nature}</span>
+      <div class="wx-detail-header">
+        <span style="color:${WX_COLOR[wx]}">${WX_INFO[wx].icon} ${WX_INFO[wx].title}（${WX_INFO[wx].nature}）</span>
       </div>
       <p class="wx-trait">${WX_INFO[wx].trait}</p>
-      <p class="wx-region">对应方位：${WX_INFO[wx].region}</p>
+      <p class="wx-region">分野方位：${WX_INFO[wx].region}</p>
     </div>`).join('')}
   </div>`;
   return html;
@@ -397,13 +483,13 @@ function calculate(e) {
     return;
   }
 
-  const analysis    = analyzeQiangRuo(rt);
-  const xiyongshens = getXiYongShen(analysis);
+  const xysResult   = getXiYongShenFull(rt);
+  const xiyongshens = xysResult.xys;
   const cities      = recommendCities(xiyongshens);
 
   // 渲染
   document.getElementById('bazi-display').innerHTML    = renderBaziCard(rt);
-  document.getElementById('analysis-display').innerHTML = renderAnalysis(analysis, xiyongshens);
+  document.getElementById('analysis-display').innerHTML = renderAnalysis(xysResult);
   document.getElementById('city-display').innerHTML    = renderCityCards(cities);
 
   // 显示结果区
