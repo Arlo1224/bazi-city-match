@@ -706,16 +706,8 @@ function renderAnalysis(xysResult) {
         <span class="score-bar-wrap">
           <span class="score-bar" style="width:${barFill}%;background:${barColor}"></span>
         </span>
-        <span style="color:${qiangColors[qiangRuo]}">  ${qiangRuo}（${score}/100）</span>
+        <span style="color:${qiangColors[qiangRuo]}">  ${qiangRuo}</span>
       </span>
-    </div>
-    <div class="analysis-row">
-      <span class="label">取用法</span>
-      <span class="value method-tag">${methodLabels[method]}</span>
-    </div>
-    <div class="analysis-row">
-      <span class="label">依据</span>
-      <span class="value detail-text">${detail}</span>
     </div>
     <div class="analysis-row xys-row">
       <span class="label">喜用神</span>

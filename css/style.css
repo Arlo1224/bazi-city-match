@@ -482,6 +482,14 @@ body {
    响应式
 ══════════════════════════════════════ */
 
+/* 时间行三列强制不折行 */
+.time-row {
+  flex-wrap: nowrap;
+}
+.time-row .form-group {
+  min-width: 0;
+}
+
 @media (max-width: 480px) {
   .form-section { padding: 20px 16px; }
   .card { padding: 18px 16px; }
