@@ -69,25 +69,35 @@
         </div>
       </div>
 
-      <!-- 时辰与性别 -->
+      <!-- 出生时间与性别 -->
       <div class="form-row">
-        <div class="form-group wide">
-          <label>出生时辰</label>
+        <div class="form-group">
+          <label>出生时（北京时间）</label>
           <select id="hour">
-            <option value="23">子时（23:00-00:59）</option>
-            <option value="1">丑时（01:00-02:59）</option>
-            <option value="3">寅时（03:00-04:59）</option>
-            <option value="5">卯时（05:00-06:59）</option>
-            <option value="7">辰时（07:00-08:59）</option>
-            <option value="9">巳时（09:00-10:59）</option>
-            <option value="11" selected>午时（11:00-12:59）</option>
-            <option value="13">未时（13:00-14:59）</option>
-            <option value="15">申时（15:00-16:59）</option>
-            <option value="17">酉时（17:00-18:59）</option>
-            <option value="19">戌时（19:00-20:59）</option>
-            <option value="21">亥时（21:00-22:59）</option>
+            <option value="0">00时</option><option value="1">01时</option>
+            <option value="2">02时</option><option value="3">03时</option>
+            <option value="4">04时</option><option value="5">05时</option>
+            <option value="6">06时</option><option value="7">07时</option>
+            <option value="8">08时</option><option value="9">09时</option>
+            <option value="10">10时</option><option value="11">11时</option>
+            <option value="12" selected>12时</option><option value="13">13时</option>
+            <option value="14">14时</option><option value="15">15时</option>
+            <option value="16">16时</option><option value="17">17时</option>
+            <option value="18">18时</option><option value="19">19时</option>
+            <option value="20">20时</option><option value="21">21时</option>
+            <option value="22">22时</option><option value="23">23时</option>
           </select>
-          <p class="form-note">不确定时辰可选午时（正午），结果仅供参考</p>
+        </div>
+        <div class="form-group">
+          <label>分</label>
+          <select id="minute">
+            <option value="0">00分</option><option value="5">05分</option>
+            <option value="10">10分</option><option value="15">15分</option>
+            <option value="20">20分</option><option value="25">25分</option>
+            <option value="30">30分</option><option value="35">35分</option>
+            <option value="40">40分</option><option value="45">45分</option>
+            <option value="50">50分</option><option value="55">55分</option>
+          </select>
         </div>
         <div class="form-group">
           <label>性别</label>
@@ -97,6 +107,7 @@
           </select>
         </div>
       </div>
+      <p class="form-note" style="margin-top:-8px">填出生证或家人记录的北京时间，系统会自动换算真太阳时</p>
 
       <!-- 出生地 -->
       <div class="form-row">

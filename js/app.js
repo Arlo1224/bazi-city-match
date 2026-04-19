@@ -380,7 +380,8 @@ function calculate(e) {
   const year    = parseInt(document.getElementById('year').value);
   const month   = parseInt(document.getElementById('month').value);
   const day     = parseInt(document.getElementById('day').value);
-  const hourVal = parseInt(document.getElementById('hour').value);
+  const hourVal  = parseInt(document.getElementById('hour').value);
+  const minuteVal = parseInt(document.getElementById('minute').value);
   const gender  = parseInt(document.getElementById('gender').value); // 0=男 1=女
 
   const provinceSel = document.getElementById('province').value;
@@ -390,7 +391,7 @@ function calculate(e) {
                    || { lng: 116.4074, lat: 39.9042 };
 
   // 调用 paipan.js 的 fatemaps（window.p 由 paipan.js 末尾初始化）
-  const rt = p.fatemaps(gender, year, month, day, hourVal, 0, 0, cityObj.lng, cityObj.lat);
+  const rt = p.fatemaps(gender, year, month, day, hourVal, minuteVal, 0, cityObj.lng, cityObj.lat);
   if (!rt) {
     alert('日期输入有误，请检查后重试');
     return;
