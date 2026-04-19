@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>生辰城市匹配 · 古义拾遗</title>
+  <meta name="description" content="根据生辰八字的喜用神，结合传统分野理论，为你找到最适合发展的城市。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="container">
+
+  <!-- 头部 -->
+  <header class="site-header">
+    <p class="logo-line">古义拾遗 · 传统文化</p>
+    <h1>生辰城市匹配</h1>
+    <p class="subtitle">以八字喜用神为纲，以分野地理为引，寻你命中最宜之城</p>
+  </header>
+
+  <!-- 输入表单 -->
+  <section class="form-section">
+    <h2>填写出生信息</h2>
+    <form id="bazi-form" novalidate>
+
+      <!-- 出生日期 -->
+      <div class="form-row">
+        <div class="form-group wide">
+          <label>出生年份</label>
+          <select id="year">
+            <!-- 由 JS 动态生成 -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label>月</label>
+          <select id="month">
+            <option value="1">1月</option>
+            <option value="2">2月</option>
+            <option value="3">3月</option>
+            <option value="4">4月</option>
+            <option value="5">5月</option>
+            <option value="6">6月</option>
+            <option value="7">7月</option>
+            <option value="8">8月</option>
+            <option value="9">9月</option>
+            <option value="10">10月</option>
+            <option value="11">11月</option>
+            <option value="12">12月</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>日</label>
+          <select id="day">
+            <option value="1">1日</option><option value="2">2日</option><option value="3">3日</option>
+            <option value="4">4日</option><option value="5">5日</option><option value="6">6日</option>
+            <option value="7">7日</option><option value="8">8日</option><option value="9">9日</option>
+            <option value="10">10日</option><option value="11">11日</option><option value="12">12日</option>
+            <option value="13">13日</option><option value="14">14日</option><option value="15">15日</option>
+            <option value="16">16日</option><option value="17">17日</option><option value="18">18日</option>
+            <option value="19">19日</option><option value="20">20日</option><option value="21">21日</option>
+            <option value="22">22日</option><option value="23">23日</option><option value="24">24日</option>
+            <option value="25">25日</option><option value="26">26日</option><option value="27">27日</option>
+            <option value="28">28日</option><option value="29">29日</option><option value="30">30日</option>
+            <option value="31">31日</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 时辰与性别 -->
+      <div class="form-row">
+        <div class="form-group wide">
+          <label>出生时辰</label>
+          <select id="hour">
+            <option value="23">子时（23:00-00:59）</option>
+            <option value="1">丑时（01:00-02:59）</option>
+            <option value="3">寅时（03:00-04:59）</option>
+            <option value="5">卯时（05:00-06:59）</option>
+            <option value="7">辰时（07:00-08:59）</option>
+            <option value="9">巳时（09:00-10:59）</option>
+            <option value="11" selected>午时（11:00-12:59）</option>
+            <option value="13">未时（13:00-14:59）</option>
+            <option value="15">申时（15:00-16:59）</option>
+            <option value="17">酉时（17:00-18:59）</option>
+            <option value="19">戌时（19:00-20:59）</option>
+            <option value="21">亥时（21:00-22:59）</option>
+          </select>
+          <p class="form-note">不确定时辰可选午时（正午），结果仅供参考</p>
+        </div>
+        <div class="form-group">
+          <label>性别</label>
+          <select id="gender">
+            <option value="0">男</option>
+            <option value="1">女</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 出生地 -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>出生省份</label>
+          <select id="province">
+            <!-- 由 JS 动态生成 -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label>出生城市</label>
+          <select id="birth-city">
+            <!-- 由 JS 动态生成 -->
+          </select>
+        </div>
+      </div>
+      <p class="form-note" style="margin-bottom:0">出生地用于计算真太阳时，可使提升排盘准确度</p>
+
+      <button type="submit" class="btn-submit">开始匹配</button>
+    </form>
+  </section>
+
+  <!-- 结果区域 -->
+  <section class="result-section" id="result">
+
+    <div class="result-divider">测 算 结 果</div>
+
+    <!-- 八字排盘 -->
+    <div class="card">
+      <div class="card-title">八字排盘（已校正真太阳时）</div>
+      <div id="bazi-display"></div>
+    </div>
+
+    <!-- 旺衰分析 + 喜用神 -->
+    <div class="card">
+      <div class="card-title">旺衰分析 · 喜用神</div>
+      <div id="analysis-display"></div>
+    </div>
+
+    <!-- 城市推荐 -->
+    <div class="card">
+      <div class="card-title">城市匹配推荐</div>
+      <div class="city-grid" id="city-display"></div>
+    </div>
+
+    <!-- 声明 -->
+    <div class="disclaimer">
+      本测算基于传统命理旺衰法与分野地理学说，仅供参考与娱乐，不构成人生决策建议。
+      命运在自身，城市是舞台，选择最终取决于你。
+    </div>
+
+  </section>
+
+</div>
+
+<!-- paipan.js 必须先于 app.js 加载 -->
+<script src="js/paipan.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
