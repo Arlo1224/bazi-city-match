@@ -18,23 +18,22 @@ const GENERATES = {'木':'火','火':'土','土':'金','金':'水','水':'木'};
 const RESTRICTS = {'木':'土','土':'水','水':'火','火':'金','金':'木'};
 
 // ══════════════════════════════════════
-// 调候用神表（极端气候月份）
-// 依据《穷通宝鉴》核心原则，五行级别
-// 极寒月：亥(11)子(0)丑(1)   极热月：巳(5)午(6)未(7)
+// 调候用神表（天干×季节）
+// 来源：Horosa-Web-App / xuan-utils-pro BaZiJiChuMap.java XI_YONG_SHEN
+// 季节映射（按月支索引）：
+//   四季末(1丑/4辰/7未/10戌) 冬(0子/11亥) 春(2寅/3卯) 夏(5巳/6午) 秋(8申/9酉)
 // ══════════════════════════════════════
-// pri = 主调候用神，sec = 次调候用神
-// 说明：
-//   木日主：寒月喜丙火暖局，热月喜癸水滋根
-//   火日主：寒月喜甲木（燃料）*注：丙火另需壬水激发，此处取木为通用
-//   土日主：寒月喜丙火暖土，热月喜壬水润土
-//   金日主：寒月喜丙火暖金（火克金，需土通关），热月喜壬水洗金泄秀
-//   水日主：寒月水旺喜戊土制水+丙火暖，热月水衰喜庚金生水
-const TIAOHOU_WX = {
-  '木': { '极寒': { pri:'火', sec:'金' }, '极热': { pri:'水', sec:'金' } },
-  '火': { '极寒': { pri:'木', sec:'土' }, '极热': { pri:'水', sec:'土' } },
-  '土': { '极寒': { pri:'火', sec:'木' }, '极热': { pri:'水', sec:'木' } },
-  '金': { '极寒': { pri:'火', sec:'土' }, '极热': { pri:'水', sec:'土' } },
-  '水': { '极寒': { pri:'土', sec:'火' }, '极热': { pri:'金', sec:'土' } },
+const XI_YONG_SHEN_TABLE = {
+  '甲': { '春':['火','土','金'], '夏':['水','木'], '秋':['水','木'], '冬':['火','金'], '四季末':['水','土'] },
+  '乙': { '春':['火','土','金'], '夏':['水','木'], '秋':['水','木'], '冬':['火','金'], '四季末':['水','土'] },
+  '丙': { '春':['水','土'],      '夏':['金','水'], '秋':['木','火'], '冬':['木','火','土'], '四季末':['木','火','金'] },
+  '丁': { '春':['水','土'],      '夏':['金','水'], '秋':['木','火'], '冬':['木','火','土'], '四季末':['木','火','金'] },
+  '戊': { '春':['火','土'],      '夏':['金','水','木'], '秋':['火','土'], '冬':['火','土'], '四季末':['木','金','水'] },
+  '己': { '春':['火','土'],      '夏':['金','水','木'], '秋':['火','土'], '冬':['火','土'], '四季末':['木','金','水'] },
+  '庚': { '春':['土','金'],      '夏':['土','水','金'], '秋':['火','木','水'], '冬':['火','土','金'], '四季末':['水','木','火'] },
+  '辛': { '春':['土','金'],      '夏':['土','水','金'], '秋':['火','木','水'], '冬':['火','土','金'], '四季末':['水','木','火'] },
+  '壬': { '春':['金','水'],      '夏':['金','水'], '秋':['木','火','土'], '冬':['木','火','土'], '四季末':['金','水'] },
+  '癸': { '春':['金','水'],      '夏':['金','水'], '秋':['木','火','土'], '冬':['木','火','土'], '四季末':['金','水'] },
 };
 
 // 五行颜色
@@ -182,123 +181,124 @@ const BIRTH_CITIES = [
 
 // 某五行对日主的关系
 function getRelation(elemWx, dayWx) {
-  if (elemWx === dayWx) return 'bijie';           // 比劫——帮扶
-  if (GENERATES[elemWx] === dayWx) return 'yin';  // 印星——帮扶
-  if (GENERATES[dayWx] === elemWx) return 'shishang'; // 食伤——克泄
-  if (RESTRICTS[dayWx] === elemWx) return 'cai';  // 财星——克泄
-  if (RESTRICTS[elemWx] === dayWx) return 'guansha'; // 官杀——克泄
+  if (elemWx === dayWx) return 'bijie';
+  if (GENERATES[elemWx] === dayWx) return 'yin';
+  if (GENERATES[dayWx] === elemWx) return 'shishang';
+  if (RESTRICTS[dayWx] === elemWx) return 'cai';
+  if (RESTRICTS[elemWx] === dayWx) return 'guansha';
   return null;
 }
 
-// 旺衰分析：返回分析结果对象
+// 季节判断（月支索引 0-11）
+// 月支: 子0丑1寅2卯3辰4巳5午6未7申8酉9戌10亥11
+function getSeason(monBrIdx) {
+  if ([1, 4, 7, 10].includes(monBrIdx)) return '四季末'; // 丑辰未戌（土支过渡月）
+  if ([11, 0].includes(monBrIdx)) return '冬';            // 亥子
+  if ([2, 3].includes(monBrIdx)) return '春';             // 寅卯
+  if ([5, 6].includes(monBrIdx)) return '夏';             // 巳午
+  if ([8, 9].includes(monBrIdx)) return '秋';             // 申酉
+  return '春';
+}
+
+// 极端气候 = 冬（亥子）或 夏（巳午），需调候急救
+function isExtreme(season) { return season === '冬' || season === '夏'; }
+
+// ── 加权积分法判断旺衰 ──────────────────────────────────────────
+// 来源：Horosa BaZi.java getShenTiQiangRuo()
+// 权重：月支40 + 月干12 + 日支12 + 时干12 + 时支12 + 年干8 + 年支4 = 100
 function analyzeQiangRuo(rt) {
-  const dayIdx  = rt['tg'][2];
-  const dayWx   = STEM_WX[dayIdx];
-  const monBrIdx = rt['dz'][1]; // 月支
-  const monWx   = BRANCH_WX[monBrIdx];
+  const dayIdx   = rt['tg'][2];
+  const dayWx    = STEM_WX[dayIdx];
+  const monBrIdx = rt['dz'][1];
+  const monWx    = BRANCH_WX[monBrIdx];
 
-  // 月令得令 = 月支同气 or 月支生日主
-  const deling = (monWx === dayWx) || (GENERATES[monWx] === dayWx);
+  const items = [
+    { wx: STEM_WX[rt['tg'][0]],   w: 8  }, // 年干
+    { wx: BRANCH_WX[rt['dz'][0]], w: 4  }, // 年支
+    { wx: STEM_WX[rt['tg'][1]],   w: 12 }, // 月干
+    { wx: BRANCH_WX[rt['dz'][1]], w: 40 }, // 月支（最重要）
+    { wx: BRANCH_WX[rt['dz'][2]], w: 12 }, // 日支
+    { wx: STEM_WX[rt['tg'][3]],   w: 12 }, // 时干
+    { wx: BRANCH_WX[rt['dz'][3]], w: 12 }, // 时支
+  ];
 
-  let helpers = 0, opponents = 0;
+  let score = 0; // 帮扶积分（满分100）
+  items.forEach(({ wx, w }) => {
+    const rel = getRelation(wx, dayWx);
+    if (rel === 'yin' || rel === 'bijie') score += w;
+  });
 
-  for (let i = 0; i < 4; i++) {
-    const stemWx = STEM_WX[rt['tg'][i]];
-    const brWx   = BRANCH_WX[rt['dz'][i]];
+  let qiangRuo;
+  if (score >= 60)      qiangRuo = '身强';
+  else if (score >= 40) qiangRuo = '平衡';
+  else                  qiangRuo = '身弱';
 
-    // 天干（跳过日干本身）
-    if (i !== 2) {
-      const rel = getRelation(stemWx, dayWx);
-      if (rel === 'yin' || rel === 'bijie') helpers++;
-      else opponents++;
-    }
-    // 地支（全部计入）
-    const brRel = getRelation(brWx, dayWx);
-    if (brRel === 'yin' || brRel === 'bijie') helpers++;
-    else opponents++;
-  }
-
-  // 得令等效帮扶 +2
-  const effectiveHelpers = helpers + (deling ? 2 : 0);
-  const isQiang = effectiveHelpers > opponents;
-
-  return { isQiang, dayIdx, dayWx, monBrIdx, monWx, deling, helpers, opponents };
+  return { qiangRuo, score, dayIdx, dayWx, monBrIdx, monWx };
 }
 
-// 喜用神五行列表（按重要性排序）
-function getXiYongShen(analysis) {
-  const { isQiang, dayWx } = analysis;
-  const xys = [];
-
-  if (isQiang) {
-    // 强日主：喜食伤、财、官杀（泄耗克制）
-    xys.push(GENERATES[dayWx]);                       // 食伤
-    xys.push(RESTRICTS[dayWx]);                       // 财
-    // 官杀 = 克日主的五行
+// 扶抑法喜用神（旺衰确定后使用）
+function getFuyiXys(analysis) {
+  const { qiangRuo, dayWx } = analysis;
+  const xys = new Set();
+  if (qiangRuo === '身强') {
+    xys.add(GENERATES[dayWx]);  // 食伤
+    xys.add(RESTRICTS[dayWx]);  // 财
     const guansha = Object.keys(RESTRICTS).find(k => RESTRICTS[k] === dayWx);
-    if (guansha) xys.push(guansha);
+    if (guansha) xys.add(guansha); // 官杀
   } else {
-    // 弱日主：喜印、比劫（生扶）
-    // 印 = 生日主的五行
     const yin = Object.keys(GENERATES).find(k => GENERATES[k] === dayWx);
-    if (yin) xys.push(yin);
-    xys.push(dayWx); // 比劫
+    if (yin) xys.add(yin); // 印
+    xys.add(dayWx);        // 比劫
   }
-  return [...new Set(xys)]; // 去重
+  return [...xys];
 }
 
-// 气候判断
-function getClimate(monBrIdx) {
-  if ([0, 1, 11].includes(monBrIdx)) return '极寒';
-  if ([5, 6, 7].includes(monBrIdx)) return '极热';
-  return '温和';
-}
-
-// 综合取用神：调候优先 + 扶抑结合
-// 原则：极端气候调候绝对优先，冲突时用通关化解，温和月以扶抑为主
+// 综合喜用神：调候优先原则
+// 冬/夏月：调候绝对优先（先救命）+ 扶抑补充
+// 春/秋/四季末 身强弱：扶抑为主 + 调候参考
+// 春/秋/四季末 平衡：调候为主
 function getXiYongShenFull(rt) {
   const analysis = analyzeQiangRuo(rt);
-  const { dayWx, monBrIdx } = analysis;
-  const climate  = getClimate(monBrIdx);
-  const fuyi     = getXiYongShen(analysis); // 扶抑法结果
+  const { qiangRuo, score, dayIdx, dayWx, monBrIdx } = analysis;
+  const dayGan   = STEMS[dayIdx];
+  const season   = getSeason(monBrIdx);
+  const extreme  = isExtreme(season);
+  const tiaohou  = XI_YONG_SHEN_TABLE[dayGan]?.[season] || [];
+  const fuyi     = qiangRuo === '平衡' ? [] : getFuyiXys(analysis);
 
-  if (climate === '温和') {
-    return { xys: fuyi, method: '扶抑为主', climate, analysis,
-      detail: '气候平和，以旺衰扶抑为主要依据' };
-  }
+  let xys, method, detail;
 
-  // ── 极端气候：调候优先 ──────────────────
-  const th  = TIAOHOU_WX[dayWx][climate];
-  const xys = [th.pri];
-  let detail;
-
-  // 情况A：调候用神直接克日主（最典型：寒冬庚金需火调候，但火克金）
-  //         化解方式：通关——调候用神所生的元素（火→土→金）
-  if (RESTRICTS[th.pri] === dayWx) {
-    const tongguan = GENERATES[th.pri]; // 如火→土
-    if (!xys.includes(tongguan)) xys.push(tongguan);
-    detail = `${climate}，先取${th.pri}调候暖局；`
-           + `${th.pri}克${dayWx}存在矛盾，以${tongguan}通关`
-           + `（${th.pri}→${tongguan}→${dayWx}）化解，兼顾调候与日主`;
-
-  // 情况B：调候与扶抑方向完全一致
-  } else if (fuyi.includes(th.pri)) {
-    fuyi.forEach(w => { if (!xys.includes(w)) xys.push(w); });
-    detail = `${climate}，调候（${th.pri}）与扶抑（${fuyi.join('/')}）方向一致，取共同用神`;
-
-  // 情况C：调候与扶抑方向不同，但无直接克制冲突
-  //         调候优先，扶抑中与调候相生的元素可兼取
-  } else {
-    if (th.sec && !xys.includes(th.sec)) xys.push(th.sec);
-    // 扶抑中与调候相生（调候生扶抑 或 扶抑生调候）的元素纳入
+  if (extreme) {
+    // 极端气候：调候绝对优先，扶抑中不冲突的元素追加
+    xys = [...tiaohou];
     fuyi.forEach(w => {
-      if ((GENERATES[th.pri] === w || GENERATES[w] === th.pri) && !xys.includes(w))
+      if (!xys.includes(w) && !tiaohou.some(t => RESTRICTS[t] === w || RESTRICTS[w] === t))
         xys.push(w);
     });
-    detail = `${climate}，调候（${th.pri}）优先救命；扶抑（${fuyi.join('/')}）为辅调运`;
+    method = '调候优先';
+    const seasonLabel = season === '冬' ? '寒冬' : '盛夏';
+    detail = `${seasonLabel}极端气候，调候急救优先；`
+           + (fuyi.length ? `扶抑（${fuyi.join('/')}）中与调候方向不冲突者一并取用` : '');
+
+  } else if (qiangRuo === '平衡') {
+    // 气候温和且平衡：直接用调候表
+    xys = [...tiaohou];
+    method = '调候为主';
+    detail = `气候${season}，日主趋于平衡（积分${score}/100），以调候查表为主要依据`;
+
+  } else {
+    // 气候温和且有明显旺弱：扶抑为主，调候参考
+    xys = [...fuyi];
+    // 调候中主用神若与扶抑不冲突，纳入参考
+    tiaohou.slice(0, 1).forEach(w => {
+      if (!xys.includes(w) && !fuyi.some(f => RESTRICTS[w] === f || RESTRICTS[f] === w))
+        xys.push(w);
+    });
+    method = '扶抑为主';
+    detail = `气候${season}，日主${qiangRuo}（积分${score}/100），以旺衰扶抑为主；调候作参考`;
   }
 
-  return { xys, method: '调候优先', climate, analysis, detail };
+  return { xys: [...new Set(xys)], method, season, extreme, qiangRuo, score, analysis, detail };
 }
 
 // 推荐城市（取前两个喜用神的城市，各3个）
@@ -377,21 +377,21 @@ function renderBaziCard(rt) {
 }
 
 function renderAnalysis(xysResult) {
-  const { xys, method, climate, analysis, detail } = xysResult;
-  const { isQiang, dayIdx, dayWx, monBrIdx, monWx, deling, helpers, opponents } = analysis;
+  const { xys, method, season, qiangRuo, score, analysis, detail } = xysResult;
+  const { dayIdx, dayWx, monBrIdx, monWx } = analysis;
 
-  const dayName  = STEMS[dayIdx];
-  const monName  = BRANCHES[monBrIdx];
-  const strength = isQiang ? '偏旺' : '偏弱';
-  const strengthColor = isQiang ? '#C84B31' : '#2B5F8A';
+  const dayName = STEMS[dayIdx];
+  const monName = BRANCHES[monBrIdx];
 
-  const climateLabels = { '极寒':'寒冬（亥子丑月）', '极热':'盛夏（巳午未月）', '温和':'春秋温和月' };
-  const climateColors = { '极寒':'#2B5F8A', '极热':'#C84B31', '温和':'#5C8A4A' };
-  const methodLabels  = { '调候优先':'调候优先 · 先救命', '扶抑为主':'扶抑为主 · 调强弱' };
+  const seasonLabels = { '冬':'寒冬（亥子月）', '夏':'盛夏（巳午月）',
+    '春':'春季（寅卯月）', '秋':'秋季（申酉月）', '四季末':'季末（辰未戌丑月）' };
+  const seasonColors = { '冬':'#2B5F8A', '夏':'#C84B31', '春':'#5C8A4A', '秋':'#B8A040', '四季末':'#8B6914' };
+  const qiangColors  = { '身强':'#C84B31', '平衡':'#5C8A4A', '身弱':'#2B5F8A' };
+  const methodLabels = { '调候优先':'调候优先（先救命）', '调候为主':'调候为主（平衡局）', '扶抑为主':'扶抑为主（调强弱）' };
 
-  const delingText = deling
-    ? `${monName}（${monWx}），${GENERATES[monWx] === dayWx ? monWx + '生' + dayWx + '，' : '同气，'}日主得令`
-    : `${monName}（${monWx}），未能扶助，日主失令`;
+  // 积分条
+  const barFill = Math.round(score);
+  const barColor = score >= 60 ? '#C84B31' : score >= 40 ? '#5C8A4A' : '#2B5F8A';
 
   let html = `
   <div class="analysis-block">
@@ -401,15 +401,20 @@ function renderAnalysis(xysResult) {
     </div>
     <div class="analysis-row">
       <span class="label">月令</span>
-      <span class="value">${delingText}</span>
+      <span class="value">${monName}（${monWx}）</span>
     </div>
     <div class="analysis-row">
-      <span class="label">气候</span>
-      <span class="value" style="color:${climateColors[climate]}">${climateLabels[climate]}</span>
+      <span class="label">季节</span>
+      <span class="value" style="color:${seasonColors[season]}">${seasonLabels[season]}</span>
     </div>
     <div class="analysis-row">
       <span class="label">旺衰</span>
-      <span class="value">${helpers} 帮扶 vs ${opponents} 克泄 · <span class="strength" style="color:${strengthColor}">日主${strength}</span></span>
+      <span class="value">
+        <span class="score-bar-wrap">
+          <span class="score-bar" style="width:${barFill}%;background:${barColor}"></span>
+        </span>
+        <span style="color:${qiangColors[qiangRuo]}">  ${qiangRuo}（${score}/100）</span>
+      </span>
     </div>
     <div class="analysis-row">
       <span class="label">取用法</span>
